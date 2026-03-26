@@ -1,177 +1,292 @@
 <!DOCTYPE html>
-<!--
- @license
- Copyright 2022 Google LLC. All Rights Reserved.
- SPDX-License-Identifier: Apache-2.0
--->
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Defer the requesting and rendering of ads." />
-    <title>Lazy loading</title>
-    <script>
-  window.googletag = window.googletag || { cmd: [] };
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Access Restricted</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  setTimeout(() => {
-    const gptScript = document.createElement("script");
-    gptScript.async = true;
-    gptScript.src = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
-    gptScript.crossOrigin = "anonymous";
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131a;
+      --border:    #2a2a3d;
+      --accent:    #ff3c5a;
+      --accent2:   #ff8c42;
+      --dim:       #4a4a6a;
+      --text:      #e8e8f0;
+      --sub:       #8888aa;
+    }
 
-    document.head.appendChild(gptScript);
-  }, 2500); // delay
-</script>
-    <script>
-      window.googletag = window.googletag || { cmd: [] };
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      overflow: hidden;
+    }
 
-      googletag.cmd.push(() => {
-        googletag.defineSlot("/6355419/Travel", [728, 90], "div-1").addService(googletag.pubads());
-        googletag.defineSlot("/6355419/Travel", [728, 90], "div-2").addService(googletag.pubads());
-        googletag.defineSlot("/6355419/Travel", [728, 90], "div-3").addService(googletag.pubads());
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.35;
+      animation: gridDrift 20s linear infinite;
+      z-index: 0;
+    }
+    @keyframes gridDrift {
+      from { background-position: 0 0; }
+      to   { background-position: 48px 48px; }
+    }
 
-        // Some examples of ways to enable lazy loading below.
-        // Normally, only one of these methods should be used.
+    /* Red vignette pulse */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(255,60,90,0.08) 100%);
+      animation: pulse 3s ease-in-out infinite alternate;
+      z-index: 0;
+      pointer-events: none;
+    }
+    @keyframes pulse {
+      from { opacity: 0.5; }
+      to   { opacity: 1; }
+    }
 
-        // A) Enable with defaults.
-        // googletag.pubads().setConfig({
-        //   lazyLoad: {},
-        // });
+    .stage {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 2rem;
+    }
 
-        // B) Enable without lazy fetching.
-        // googletag.pubads().setConfig({
-        //   lazyLoad: {
-        //     fetchMarginPercent: null,
-        //   },
-        // });
+    /* Lock icon SVG */
+    .lock-wrap {
+      position: relative;
+      margin-bottom: 2.5rem;
+      animation: floatLock 4s ease-in-out infinite;
+    }
+    @keyframes floatLock {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+    .lock-ring {
+      position: absolute;
+      inset: -18px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,60,90,0.25);
+      animation: ringExpand 2.5s ease-out infinite;
+    }
+    .lock-ring:nth-child(2) { inset: -34px; animation-delay: 0.6s; }
+    .lock-ring:nth-child(3) { inset: -52px; animation-delay: 1.2s; }
+    @keyframes ringExpand {
+      0%   { opacity: 0.6; transform: scale(0.9); }
+      100% { opacity: 0;   transform: scale(1.15); }
+    }
+    .lock-svg {
+      display: block;
+      filter: drop-shadow(0 0 24px rgba(255,60,90,0.55));
+    }
 
-        // C) Enable lazy loading with a custom configuration.
-        googletag.setConfig({
-          lazyLoad: {
-            // Fetch slots within 5 viewports.
-            fetchMarginPercent: 500,
-            // Render slots within 2 viewports.
-            renderMarginPercent: 200,
-            // Double the above values on mobile, where viewports are smaller
-            // and users tend to scroll faster.
-            mobileScaling: 2.0,
-          },
-          targeting: {
-            test: "lazyload",
-          },
-          singleRequest: true,
-        });
+    /* Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,60,90,0.1);
+      border: 1px solid rgba(255,60,90,0.35);
+      border-radius: 4px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.1s step-start infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
 
-        // Register event handlers to observe lazy loading behavior.
-        googletag.pubads().addEventListener("slotRequested", (event) => {
-          updateSlotStatus(event.slot.getSlotElementId(), "fetched");
-        });
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      text-align: center;
+      background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      animation: slideUp 0.7s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-        googletag.pubads().addEventListener("slotOnload", (event) => {
-          updateSlotStatus(event.slot.getSlotElementId(), "rendered");
-        });
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--sub);
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.8;
+      animation: slideUp 0.7s 0.15s cubic-bezier(.22,1,.36,1) both;
+    }
 
-        // Enable services.
-        googletag.enableServices();
-      });
+    /* Divider */
+    .divider {
+      width: 320px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 2rem 0;
+      animation: slideUp 0.7s 0.25s cubic-bezier(.22,1,.36,1) both;
+    }
 
-      function updateSlotStatus(slotId, state) {
-        const elem = document.getElementById(slotId + "-" + state);
-        elem.className = "activated";
-        elem.innerText = "Yes";
-      }
-    </script>
-    <style>
-      div.ad-slot {
-        border-style: dashed;
-        display: block;
-        margin: auto;
-      }
+    /* Info rows */
+    .info-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 340px;
+      animation: slideUp 0.7s 0.35s cubic-bezier(.22,1,.36,1) both;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--sub);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.6rem;
+    }
+    .info-row span:last-child { color: var(--text); }
 
-      div.main-content {
-        background-color: lightsteelblue;
-        margin-top: 125px;
-        overflow: hidden;
-        width: 100%;
-      }
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 2.2rem;
+      animation: slideUp 0.7s 0.45s cubic-bezier(.22,1,.36,1) both;
+    }
+    .btn {
+      padding: 0.65rem 1.4rem;
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(255,60,90,0.35);
+    }
+    .btn-primary:hover {
+      background: #ff1f40;
+      box-shadow: 0 0 32px rgba(255,60,90,0.55);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--sub);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--dim);
+      transform: translateY(-1px);
+    }
 
-      div.status-panel {
-        background: white;
-        height: 125px;
-        position: fixed;
-        top: 0;
-        width: 100%;
-      }
+    /* Error code watermark */
+    .watermark {
+      position: fixed;
+      bottom: 2.5rem;
+      right: 3rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 7rem;
+      font-weight: 800;
+      color: rgba(255,60,90,0.04);
+      letter-spacing: -0.04em;
+      user-select: none;
+      pointer-events: none;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
 
-      table {
-        width: 100%;
-      }
+  <div class="stage">
 
-      table th {
-        text-align: center;
-      }
-
-      table td:not(.slot-name) {
-        background-color: lightsalmon;
-      }
-
-      table td.activated {
-        background-color: lightgreen;
-      }
-    </style>
-  </head>
-  <body>
-    <!--
-      As defined by lazy load settings, initially:
-      1. Slot 1 will be fetched and rendered on mobile and desktop.
-      2. Slot 2 will be fetched on mobile and desktop, but will not be rendered on desktop.
-      3. Slot 3 will be fetched on mobile and desktop, but rendered on neither.
-    -->
-
-    <div class="main-content">
-      <div id="div-1" class="ad-slot" style="height: 90px; width: 728px"></div>
-
-      <!-- 3 viewport tall div to place next slot 3 viewports away. -->
-      <div style="height: 300vh"></div>
-
-      <div id="div-2" class="ad-slot" style="height: 90px; width: 728px"></div>
-
-      <!-- 9 viewport tall div to place next slot 12 viewports away. -->
-      <div style="height: 900vh"></div>
-
-      <div id="div-3" class="ad-slot" style="height: 90px; width: 728px"></div>
+    <div class="lock-wrap">
+      <div class="lock-ring"></div>
+      <div class="lock-ring"></div>
+      <div class="lock-ring"></div>
+      <svg class="lock-svg" width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="12" y="32" width="48" height="34" rx="6" fill="#13131a" stroke="#ff3c5a" stroke-width="2"/>
+        <path d="M22 32V24C22 16.268 28.268 10 36 10C43.732 10 50 16.268 50 24V32" stroke="#ff3c5a" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="36" cy="48" r="5" fill="#ff3c5a"/>
+        <line x1="36" y1="53" x2="36" y2="59" stroke="#ff3c5a" stroke-width="2" stroke-linecap="round"/>
+      </svg>
     </div>
 
-    <div class="status-panel">
-      <table>
-        <tr>
-          <th>Ad Slot</th>
-          <th>Fetched?</th>
-          <th>Rendered?</th>
-        </tr>
-        <tr>
-          <td class="slot-name">Ad Slot 1</td>
-          <td id="div-1-fetched">No</td>
-          <td id="div-1-rendered">No</td>
-        </tr>
-        <tr>
-          <td class="slot-name">Ad Slot 2</td>
-          <td id="div-2-fetched">No</td>
-          <td id="div-2-rendered">No</td>
-        </tr>
-        <tr>
-          <td class="slot-name">Ad Slot 3</td>
-          <td id="div-3-fetched">No</td>
-          <td id="div-3-rendered">No</td>
-        </tr>
-      </table>
-      <p>Scroll the container below to lazily load the ad slots.</p>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Error 403
     </div>
-    <script>
-      googletag.cmd.push(function () {
-        // Request all previously defined ad slots.
-        googletag.display("div-1");
-      });
-    </script>
-  </body>
+
+    <h1>Access Denied</h1>
+
+    <p class="subtitle">You don't have permission to view this resource. Contact your administrator or request access.</p>
+
+    <div class="divider"></div>
+
+    <div class="info-block">
+      <div class="info-row">
+        <span>Status</span>
+        <span>403 Forbidden</span>
+      </div>
+      <div class="info-row">
+        <span>Resource</span>
+        <span>/dashboard/admin</span>
+      </div>
+      <div class="info-row">
+        <span>Required Role</span>
+        <span>Administrator</span>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary">Request Access</button>
+      <button class="btn btn-ghost">Go Back</button>
+    </div>
+
+  </div>
+
+  <div class="watermark">403</div>
+
+</body>
 </html>
