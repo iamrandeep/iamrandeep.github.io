@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<!--
+ @license
+ Copyright 2022 Google LLC. All Rights Reserved.
+ SPDX-License-Identifier: Apache-2.0
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Defer the requesting and rendering of ads." />
+    <title>Lazy loading</title>
+    <script
+      async
+      src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      window.googletag = window.googletag || { cmd: [] };
+
+      const slotMap = {};
+      const requestedSlots = new Set();
+
+      googletag.cmd.push(() => {
+        slotMap["div-1"] = googletag
+          .defineSlot("/6355419/Travel", [728, 90], "div-1")
+          .addService(googletag.pubads());
+
+        slotMap["div-2"] = googletag
+          .defineSlot("/6355419/Travel", [728, 90], "div-2")
+          .addService(googletag.pubads());
+
+        slotMap["div-3"] = googletag
+          .defineSlot("/6355419/Travel", [728, 90], "div-3")
+          .addService(googletag.pubads());
+
+        // Updated config:
+        // - Keep GPT async
+        // - Enable lazy loading
+        // - Disable initial load so requests happen only when we decide
+        // - Avoid bunching requests together at initial load
+        googletag.setConfig({
+          disableInitialLoad: true,
+          lazyLoad: {
+            fetchMarginPercent: 300,
+            renderMarginPercent: 100,
+            mobileScaling: 1.5,
+          },
+          targeting: {
+            test: "lazyload",
+          },
+          singleRequest: false,
+        });
+
+        // Register event handlers to observe lazy loading behavior.
+        googletag.pubads().addEventListener("slotRequested", (event) => {
+          updateSlotStatus(event.slot.getSlotElementId(), "fetched");
+        });
+
+        googletag.pubads().addEventListener("slotOnload", (event) => {
+          updateSlotStatus(event.slot.getSlotElementId(), "rendered");
+        });
+
+        // Enable services.
+        googletag.enableServices();
+      });
+
+      function requestSlot(slotId) {
+        if (requestedSlots.has(slotId)) return;
+        googletag.cmd.push(() => {
+          googletag.pubads().refresh([slotMap[slotId]]);
+          requestedSlots.add(slotId);
+        });
+      }
+
+      function setupObserver(slotId) {
+        const elem = document.getElementById(slotId);
+        if (!elem) return;
+
+        if (!("IntersectionObserver" in window)) {
+          requestSlot(slotId);
+          return;
+        }
+
+        const observer = new IntersectionObserver(
+          (entries, obs) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                requestSlot(slotId);
+                obs.unobserve(entry.target);
+              }
+            });
+          },
+          {
+            root: null,
+            rootMargin: "300px 0px",
+            threshold: 0.01,
+          }
+        );
+
+        observer.observe(elem);
+      }
+
+      function updateSlotStatus(slotId, state) {
+        const elem = document.getElementById(slotId + "-" + state);
+        elem.className = "activated";
+        elem.innerText = "Yes";
+      }
+    </script>
+    <style>
+      div.ad-slot {
+        border-style: dashed;
+        display: block;
+        margin: auto;
+      }
+
+      div.main-content {
+        background-color: lightsteelblue;
+        margin-top: 125px;
+        overflow: hidden;
+        width: 100%;
+      }
+
+      div.status-panel {
+        background: white;
+        height: 125px;
+        position: fixed;
+        top: 0;
+        width: 100%;
+      }
+
+      table {
+        width: 100%;
+      }
+
+      table th {
+        text-align: center;
+      }
+
+      table td:not(.slot-name) {
+        background-color: lightsalmon;
+      }
+
+      table td.activated {
+        background-color: lightgreen;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      As defined by lazy load settings, initially:
+      1. Slot 1 will be fetched and rendered on mobile and desktop.
+      2. Slot 2 will be fetched on mobile and desktop, but will not be rendered on desktop.
+      3. Slot 3 will be fetched on mobile and desktop, but rendered on neither.
+    -->
+
+    <div class="main-content">
+      <div id="div-1" class="ad-slot" style="height: 90px; width: 728px"></div>
+
+      <!-- 3 viewport tall div to place next slot 3 viewports away. -->
+      <div style="height: 300vh"></div>
+
+      <div id="div-2" class="ad-slot" style="height: 90px; width: 728px"></div>
+
+      <!-- 9 viewport tall div to place next slot 12 viewports away. -->
+      <div style="height: 900vh"></div>
+
+      <div id="div-3" class="ad-slot" style="height: 90px; width: 728px"></div>
+    </div>
+
+    <div class="status-panel">
+      <table>
+        <tr>
+          <th>Ad Slot</th>
+          <th>Fetched?</th>
+          <th>Rendered?</th>
+        </tr>
+        <tr>
+          <td class="slot-name">Ad Slot 1</td>
+          <td id="div-1-fetched">No</td>
+          <td id="div-1-rendered">No</td>
+        </tr>
+        <tr>
+          <td class="slot-name">Ad Slot 2</td>
+          <td id="div-2-fetched">No</td>
+          <td id="div-2-rendered">No</td>
+        </tr>
+        <tr>
+          <td class="slot-name">Ad Slot 3</td>
+          <td id="div-3-fetched">No</td>
+          <td id="div-3-rendered">No</td>
+        </tr>
+      </table>
+      <p>Scroll the container below to lazily load the ad slots.</p>
+    </div>
+    <script>
+      googletag.cmd.push(function () {
+        // Register all slots, but request only the first ad initially.
+        googletag.display("div-1");
+        googletag.display("div-2");
+        googletag.display("div-3");
+
+        requestSlot("div-1");
+        setupObserver("div-2");
+        setupObserver("div-3");
+      });
+    </script>
+  </body>
+</html>
